@@ -63,7 +63,7 @@ const putDataUser = async (req, res) => {
     .populate(category)
    
     const createSchema = returnSchema(newData)
-    dataUser[category].unshift(createSchema._id)
+    dataUser[category].push(createSchema._id)
     // console.log(dataUser)
         const saveCategoryData = await createSchema.save()
         const saveDataUser = await dataUser.save()
