@@ -7,7 +7,10 @@ const IncomeSchema = new Schema({
     currency: { type: String, required: true },
     description: { type: String },
     quantity: { type: Number, required: true },
-    method: { type: String, enum: ['cash', 'card'], required: true }
+    method: { type: String, enum: ['cash', 'card'], required: true },
+    date: { type: Date, required: true },
+    model: { type: String, enum: ['income'], required: true }
+
 }, {
     timestamps: true
 })

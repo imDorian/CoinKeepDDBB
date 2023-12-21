@@ -4,6 +4,8 @@ const { validationPassword, validationEmail } = require('../../validators/valida
 const { generateSign } = require('../../jwt/jwt')
 const Data = require('../model/data.model')
 const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
+const Balance = require('../model/balance.model')
+const PersonalBalance = require('../model/personalBalance.model')
 
 
 const newDataUser = {
@@ -12,20 +14,23 @@ const newDataUser = {
     saving: [],
     investment: [],
     personal_spend: [],
-    available_personal_spend: {}
+    available_personal_spend: {},
+    balance: {},
+    personal_balance: {}
 }
 
 
 const register = async (req, res, next) => {
     const newUser = new User(req.body)
     const newData = new Data(newDataUser)
-    const availablePS = {
-        card: 0,
-        cash: 0
-    }
-    const availablePersonalSpend = new AvailablePersonalSpend(availablePS)
+    const methodSchema = { card: 0, cash: 0 }
+    const availablePersonalSpend = new AvailablePersonalSpend(methodSchema)
+    const balance = new Balance(methodSchema)
+    const balancePersonal = new PersonalBalance(methodSchema)
     newUser.data = newData._id
     newData.available_personal_spend = availablePersonalSpend._id
+    newData.balance = balance._id
+    newData.personal_balance = balancePersonal._id
     try {
         if(!validationEmail(req.body.email)) {
             //console.log({code: 403, message: "Invalid email"})
@@ -40,7 +45,9 @@ const register = async (req, res, next) => {
         const createdData = await newData.save()
         const createdUser = await newUser.save()
         const createdAvailablePersonalSpend = await availablePersonalSpend.save()
-        return res.status(201).json({createdUser, createdData, createdAvailablePersonalSpend})
+        const createdBalance = await balance.save()
+        const createdBalancePersonal = await balancePersonal.save()
+        return res.status(201).json({createdUser, createdData, createdAvailablePersonalSpend, createdBalance, createdBalancePersonal})
     } catch (error) {
         console.error(error)
         return res.status(500).json(error) 

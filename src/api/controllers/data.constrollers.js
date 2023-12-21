@@ -8,6 +8,8 @@ const PersonalSpend = require('../model/personalSpend.model')
 const Saving = require('../model/saving.model')
 const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
 const { findById } = require('../model/users.model')
+const Balance = require('../model/balance.model')
+const PersonalBalance = require('../model/personalBalance.model')
 
 const CATEGORIES = {
     income: 'income',
@@ -15,6 +17,9 @@ const CATEGORIES = {
     saving: 'saving',
     investment: 'investment',
     personal_spend: 'personal_spend',
+    balance: 'balance',
+    personal_balance: 'personal_balance',
+    available_personal_spend: 'available_personal_spend'
 }
 const getDataUser = async (req, res) => {
       try {
@@ -26,6 +31,8 @@ const getDataUser = async (req, res) => {
         .populate('investment')
         .populate('personal_spend')
         .populate('available_personal_spend')
+        .populate('balance')
+        .populate('personal_balance')
         console.log(userData)
         if (userData) {
             return res.status(200).json(userData)
@@ -85,16 +92,32 @@ const createDataUser = async (req, res) => {
     }
 }
 
-const putAvailablePersonalSpend = async (req, res) => {
+const putMethodSchema = async (req, res) => {
     try {
-        const { id } = req.params
+        const { category, id } = req.params
         const newData = req.body
-        console.log(newData) 
-        const availablePersonalSpend = await AvailablePersonalSpend.findById(id)
-        availablePersonalSpend.card = newData.card
-        availablePersonalSpend.cash = newData.cash
-        await availablePersonalSpend.save()
-        return res.status(200).json(availablePersonalSpend)
+        console.log('categoria', category, id, newData)
+        if (category === CATEGORIES.balance) {
+            const balance = await Balance.findById(id)
+            balance.card = newData.card
+            balance.cash = newData.cash
+            await balance.save()
+            return res.status(200).json(balance)
+        }
+        if (category === CATEGORIES.personal_balance) {
+            const personalBalance = await PersonalBalance.findById(id)
+            personalBalance.card = newData.card
+            personalBalance.cash = newData.cash
+            await personalBalance.save()
+            return res.status(200).json(personalBalance)
+        }
+        if (category === CATEGORIES.available_personal_spend) {
+            const availablePersonalSpend = await AvailablePersonalSpend.findById(id)
+            availablePersonalSpend.card = newData.card
+            availablePersonalSpend.cash = newData.cash
+            await availablePersonalSpend.save()
+            return res.status(200).json(availablePersonalSpend)
+        }
     } catch (error) {
         console.error(error)
         return res.status(500)
@@ -138,9 +161,37 @@ const deletePersonalSpend = async (req, res ) => {
         return res.status(200).json('Personal spend deleted!')
     } catch (error) {
         console.error(error)
+        return res.status(404).json(error)
     }
-    
-    
 }
 
-module.exports = { getDataUser, putDataUser, createDataUser, verifyToken, putAvailablePersonalSpend, deletePersonalSpend, createPersonalSpend }
+const deleteFinancial = async (req, res) => {
+    try {
+        const { model, id } = req.params
+        const query = {
+            _id: id
+        }
+        const returnSchema = () => {
+            if (model === 'income') {
+                return Income
+            }
+            if (model === 'expense') {
+                return Expense
+            }
+            if (model === 'saving') {
+                return Saving
+            }
+            if (model === 'investment') {
+                return Investment
+            }
+        }
+        const financialModel = returnSchema()
+        const financialItem = await financialModel.deleteOne(query)
+        return res.status(200).json('Financial Item Deleted!')
+    } catch (error) {
+        console.error(error)
+        return res.status(404).json(error)
+    }
+   
+}
+module.exports = { getDataUser, putDataUser, createDataUser, verifyToken, putMethodSchema, deletePersonalSpend, createPersonalSpend, deleteFinancial }

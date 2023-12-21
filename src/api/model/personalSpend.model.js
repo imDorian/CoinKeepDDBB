@@ -8,7 +8,8 @@ const PersonalSpendSchema = new Schema({
     description: { type: String },
     quantity: { type: Number, required: true },
     method: { type: String, enum: ['card', 'cash'], required: true },
-    date: { type: Date, required: true }
+    date: { type: Date, required: true },
+    model: { type: String, enum: ['personal'], required: true }
 }, {
     timestamps: true
 })
