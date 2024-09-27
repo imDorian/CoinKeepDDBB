@@ -3,7 +3,7 @@ const Schema = mongoose.Schema
 
 const PersonalSpendSchema = new Schema({
     establishment: { type: String, required: true },
-    product: { type: String, required: true },
+    product: [{ type: String, required: true }],
     currency: { type: String, required: true },
     description: { type: String },
     quantity: { type: Number, required: true },

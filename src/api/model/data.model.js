@@ -9,7 +9,8 @@ const DataSchema = new Schema({
     available_personal_spend: { type: Schema.Types.ObjectId, ref: 'AvailablePersonalSpend' },
     personal_balance: { type: Schema.Types.ObjectId, ref: 'PersonalBalance' },
     balance: { type: Schema.Types.ObjectId, ref: 'Balance' },
-    personal_spend: [{ type: Schema.Types.ObjectId, ref: 'PersonalSpend' }]
+    personal_spend: [{ type: Schema.Types.ObjectId, ref: 'PersonalSpend' }],
+    monthGoal: { type: Schema.Types.ObjectId, ref: 'MonthGoal' }
 }, {
     timestamps: true
 })

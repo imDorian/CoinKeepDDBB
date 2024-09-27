@@ -6,6 +6,7 @@ const Data = require('../model/data.model')
 const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
 const Balance = require('../model/balance.model')
 const PersonalBalance = require('../model/personalBalance.model')
+const MonthGoal = require('../model/monthGoal.model')
 
 
 const newDataUser = {
@@ -16,7 +17,8 @@ const newDataUser = {
     personal_spend: [],
     available_personal_spend: {},
     balance: {},
-    personal_balance: {}
+    personal_balance: {},
+    monthGoal: {}
 }
 
 
@@ -27,10 +29,12 @@ const register = async (req, res, next) => {
     const availablePersonalSpend = new AvailablePersonalSpend(methodSchema)
     const balance = new Balance(methodSchema)
     const balancePersonal = new PersonalBalance(methodSchema)
+    const monthGoal = new MonthGoal({ monthGoal: 0 })
     newUser.data = newData._id
     newData.available_personal_spend = availablePersonalSpend._id
     newData.balance = balance._id
     newData.personal_balance = balancePersonal._id
+    newData.monthGoal = monthGoal._id
     try {
         if(!validationEmail(req.body.email)) {
             //console.log({code: 403, message: "Invalid email"})
@@ -47,7 +51,8 @@ const register = async (req, res, next) => {
         const createdAvailablePersonalSpend = await availablePersonalSpend.save()
         const createdBalance = await balance.save()
         const createdBalancePersonal = await balancePersonal.save()
-        return res.status(201).json({createdUser, createdData, createdAvailablePersonalSpend, createdBalance, createdBalancePersonal})
+        const createdMonthGoal = await monthGoal.save()
+        return res.status(201).json({createdUser, createdData, createdAvailablePersonalSpend, createdBalance, createdBalancePersonal, createdMonthGoal})
     } catch (error) {
         console.error(error)
         return res.status(500).json(error) 

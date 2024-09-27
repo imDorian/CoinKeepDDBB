@@ -10,6 +10,7 @@ const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
 const { findById } = require('../model/users.model')
 const Balance = require('../model/balance.model')
 const PersonalBalance = require('../model/personalBalance.model')
+const MonthGoal = require('../model/monthGoal.model')
 
 const CATEGORIES = {
     income: 'income',
@@ -33,6 +34,7 @@ const getDataUser = async (req, res) => {
         .populate('available_personal_spend')
         .populate('balance')
         .populate('personal_balance')
+        .populate('monthGoal')
         console.log(userData)
         if (userData) {
             return res.status(200).json(userData)
@@ -192,6 +194,35 @@ const deleteFinancial = async (req, res) => {
         console.error(error)
         return res.status(404).json(error)
     }
-   
 }
-module.exports = { getDataUser, putDataUser, createDataUser, verifyToken, putMethodSchema, deletePersonalSpend, createPersonalSpend, deleteFinancial }
+
+const putMonthGoal = async (req, res) => {
+    try {
+        const { id } = req.params
+        const newGoal = req.body
+        console.log(newGoal)
+        const newSchema = await MonthGoal.findById(id)
+        newSchema.monthGoal = newGoal.monthGoal
+        newSchema.startDate = newGoal.startDate
+        newSchema.endDate = newGoal.endDate
+        newSchema.save()
+        return res.status(200).json(newSchema)
+    } catch (error) {
+        
+    }
+}
+const createMonthGoal = async (req, res) => {
+    try {
+        const { id } = req.params
+        const newGoal = new MonthGoal({ monthGoal: 0 })
+        const userData = await Data.findById(id)
+        userData.monthGoal = newGoal._id
+        newGoal.save()
+        userData.save()
+        return res.status(200).json(userData)
+    } catch (error) {
+        console.log(error)
+    }
+    
+}
+module.exports = { getDataUser, putDataUser, createDataUser, verifyToken, putMethodSchema, deletePersonalSpend, createPersonalSpend, deleteFinancial, putMonthGoal, createMonthGoal }
