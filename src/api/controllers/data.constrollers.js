@@ -14,6 +14,8 @@ const { findById } = require('../model/users.model')
 const Balance = require('../model/balance.model')
 const PersonalBalance = require('../model/personalBalance.model')
 const MonthGoal = require('../model/monthGoal.model')
+const { OAuth2Client } = require('google-auth-library')
+const client = new OAuth2Client(process.env.CLIENT_ID)
 
 const CATEGORIES = {
   income: 'income',
@@ -142,6 +144,26 @@ const verifyToken = async (req, res) => {
   }
 }
 
+async function verifyGoogleToken (token) {
+  const ticket = await client.verifyIdToken({
+    idToken: token,
+    audience: process.env.CLIENT_ID
+  })
+  const payload = ticket.getPayload()
+  return payload
+}
+
+async function isGoogleLogin (req, res) {
+  const { token } = req.body
+  try {
+    const userInfo = await verifyGoogleToken(token)
+    // Aquí puedes crear el usuario en tu base de datos o iniciar sesión
+    res.status(200).json(userInfo)
+  } catch (error) {
+    res.status(400).json({ error: 'Token inválido' })
+  }
+}
+
 const createPersonalSpend = async (req, res) => {
   try {
     const { data } = req.body
@@ -234,5 +256,6 @@ module.exports = {
   createPersonalSpend,
   deleteFinancial,
   putMonthGoal,
-  createMonthGoal
+  createMonthGoal,
+  isGoogleLogin
 }
