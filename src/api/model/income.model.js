@@ -1,7 +1,8 @@
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
-const IncomeSchema = new Schema({
+const IncomeSchema = new Schema(
+  {
     category: { type: String, required: true },
     type: { type: String, required: true },
     currency: { type: String, required: true },
@@ -10,10 +11,11 @@ const IncomeSchema = new Schema({
     method: { type: String, enum: ['cash', 'card'], required: true },
     date: { type: Date, required: true },
     model: { type: String, enum: ['income'], required: true }
-
-}, {
+  },
+  {
     timestamps: true
-})
+  }
+)
 
 const Income = mongoose.model('Income', IncomeSchema)
 

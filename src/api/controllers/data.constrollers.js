@@ -3,7 +3,7 @@ const {
   validationPassword,
   validationEmail
 } = require('../../validators/validation')
-const { verifyJwt } = require('../../jwt/jwt')
+const { verifyJwt, generateSign } = require('../../jwt/jwt')
 const Income = require('../model/income.model')
 const Expense = require('../model/expense.model')
 const Investment = require('../model/investment.model')
@@ -15,6 +15,8 @@ const Balance = require('../model/balance.model')
 const PersonalBalance = require('../model/personalBalance.model')
 const MonthGoal = require('../model/monthGoal.model')
 const { OAuth2Client } = require('google-auth-library')
+const User = require('../model/users.model')
+const { newDataUser } = require('./users.contollers')
 const client = new OAuth2Client(process.env.CLIENT_ID)
 
 const CATEGORIES = {
@@ -39,7 +41,6 @@ const getDataUser = async (req, res) => {
       .populate('available_personal_spend')
       .populate('balance')
       .populate('personal_balance')
-      .populate('monthGoal')
     console.log(userData)
     if (userData) {
       return res.status(200).json(userData)
@@ -152,14 +153,69 @@ async function verifyGoogleToken (token) {
   const payload = ticket.getPayload()
   return payload
 }
+async function fetchGoogleUserInfo (accessToken) {
+  const response = await fetch(
+    `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      }
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error('Error al obtener la información del usuario')
+  }
+  const data = await response.json()
+  return data
+}
 
 async function isGoogleLogin (req, res) {
-  const { token } = req.body
+  // console.log(userInfo)
+  // Aquí puedes crear el usuario en tu base de datos o iniciar sesión
   try {
-    const userInfo = await verifyGoogleToken(token)
-    // Aquí puedes crear el usuario en tu base de datos o iniciar sesión
-    res.status(200).json(userInfo)
+    const { token } = req.body
+    const userInfo = await fetchGoogleUserInfo(token)
+    const { email, given_name, picture } = userInfo
+    let user = await User.findOne({ email })
+
+    // console.log(user)
+    if (!user) {
+      user = new User({ name: given_name, email, image: picture })
+      let newData = new Data(newDataUser)
+      const methodSchema = { card: 0, cash: 0 }
+      const availablePersonalSpend = new AvailablePersonalSpend(methodSchema)
+      const balance = new Balance(methodSchema)
+      const balancePersonal = new PersonalBalance(methodSchema)
+      newData.available_personal_spend = availablePersonalSpend._id
+      newData.balance = balance._id
+      newData.personal_balance = balancePersonal._id
+
+      await availablePersonalSpend.save()
+      await balance.save()
+      await balancePersonal.save()
+      await newData.save()
+      user.data = newData._id
+      await user.save()
+      const token = generateSign(user._id, user.email)
+      console.log('usuario creado correctamente')
+      res.status(200).json({ token, user })
+    } else {
+      user.image = picture || ''
+      user.name = given_name || user.name
+      user.email = email || user.email
+      const token = generateSign(user._id, user.email)
+      console.log('Iniciando sesion')
+      res.status(200).json({ token, user })
+    }
+
+    // no existe usuario // crearlo
+    // existe usuario
+    // console.log(userInfo)
   } catch (error) {
+    console.error(error)
     res.status(400).json({ error: 'Token inválido' })
   }
 }
