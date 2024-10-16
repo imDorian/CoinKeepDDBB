@@ -6,20 +6,13 @@ const {
 } = require('../../validators/validation')
 const { generateSign } = require('../../jwt/jwt')
 const Data = require('../model/data.model')
-const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
 const Balance = require('../model/balance.model')
-const PersonalBalance = require('../model/personalBalance.model')
-const MonthGoal = require('../model/monthGoal.model')
 
 const newDataUser = {
   income: [],
   expense: [],
-  saving: [],
-  investment: [],
-  personal_spend: [],
-  available_personal_spend: {},
   balance: {},
-  personal_balance: {}
+  valut: []
 }
 
 const register = async (req, res, next) => {
@@ -30,13 +23,9 @@ const register = async (req, res, next) => {
       const newUser = new User(req.body)
       const newData = new Data(newDataUser)
       const methodSchema = { card: 0, cash: 0 }
-      const availablePersonalSpend = new AvailablePersonalSpend(methodSchema)
       const balance = new Balance(methodSchema)
-      const balancePersonal = new PersonalBalance(methodSchema)
       newUser.data = newData._id
-      newData.available_personal_spend = availablePersonalSpend._id
       newData.balance = balance._id
-      newData.personal_balance = balancePersonal._id
       if (!validationEmail(req.body.email)) {
         res.status(403).send({ code: 403, message: 'Invalid email' })
         return next()
@@ -48,15 +37,11 @@ const register = async (req, res, next) => {
       newUser.password = bcrypt.hashSync(newUser.password, 10)
       const createdData = await newData.save()
       const createdUser = await newUser.save()
-      const createdAvailablePersonalSpend = await availablePersonalSpend.save()
       const createdBalance = await balance.save()
-      const createdBalancePersonal = await balancePersonal.save()
       return res.status(201).json({
         createdUser,
         createdData,
-        createdAvailablePersonalSpend,
-        createdBalance,
-        createdBalancePersonal
+        createdBalance
       })
     } else {
       console.log('el usuario ya existe')

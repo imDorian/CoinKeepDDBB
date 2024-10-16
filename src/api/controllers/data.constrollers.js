@@ -6,28 +6,21 @@ const {
 const { verifyJwt, generateSign } = require('../../jwt/jwt')
 const Income = require('../model/income.model')
 const Expense = require('../model/expense.model')
-const Investment = require('../model/investment.model')
-const PersonalSpend = require('../model/personalSpend.model')
-const Saving = require('../model/saving.model')
-const AvailablePersonalSpend = require('../model/availablePersonalSpend.model')
 const { findById } = require('../model/users.model')
 const Balance = require('../model/balance.model')
-const PersonalBalance = require('../model/personalBalance.model')
-const MonthGoal = require('../model/monthGoal.model')
 const { OAuth2Client } = require('google-auth-library')
 const User = require('../model/users.model')
 const { newDataUser } = require('./users.contollers')
+const Valut = require('../model/valut.model')
+const ValutElement = require('../model/valutElement.model')
 const client = new OAuth2Client(process.env.CLIENT_ID)
 
 const CATEGORIES = {
   income: 'income',
   expense: 'expense',
-  saving: 'saving',
-  investment: 'investment',
-  personal_spend: 'personal_spend',
   balance: 'balance',
-  personal_balance: 'personal_balance',
-  available_personal_spend: 'available_personal_spend'
+  valut: 'valut',
+  valutElement: 'valutElement'
 }
 const getDataUser = async (req, res) => {
   try {
@@ -35,12 +28,8 @@ const getDataUser = async (req, res) => {
     const userData = await Data.findById(id)
       .populate('income')
       .populate('expense')
-      .populate('saving')
-      .populate('investment')
-      .populate('personal_spend')
-      .populate('available_personal_spend')
+      .populate('valut')
       .populate('balance')
-      .populate('personal_balance')
     console.log(userData)
     if (userData) {
       return res.status(200).json(userData)
@@ -52,7 +41,7 @@ const getDataUser = async (req, res) => {
   }
 }
 
-const putDataUser = async (req, res) => {
+const addDataUser = async (req, res) => {
   try {
     const returnSchema = data => {
       if (category === CATEGORIES.income) {
@@ -61,14 +50,11 @@ const putDataUser = async (req, res) => {
       if (category === CATEGORIES.expense) {
         return new Expense(data)
       }
-      if (category === CATEGORIES.saving) {
-        return new Saving(data)
+      if (category === CATEGORIES.valut) {
+        return new Valut(data)
       }
-      if (category === CATEGORIES.investment) {
-        return new Investment(data)
-      }
-      if (category === CATEGORIES.personal_spend) {
-        return new PersonalSpend(data)
+      if (category === CATEGORIES.valutElement) {
+        return new ValutElement(data)
       }
     }
     const { category, id } = req.params
@@ -112,19 +98,12 @@ const putMethodSchema = async (req, res) => {
       await balance.save()
       return res.status(200).json(balance)
     }
-    if (category === CATEGORIES.personal_balance) {
-      const personalBalance = await PersonalBalance.findById(id)
-      personalBalance.card = newData.card
-      personalBalance.cash = newData.cash
-      await personalBalance.save()
-      return res.status(200).json(personalBalance)
-    }
-    if (category === CATEGORIES.available_personal_spend) {
-      const availablePersonalSpend = await AvailablePersonalSpend.findById(id)
-      availablePersonalSpend.card = newData.card
-      availablePersonalSpend.cash = newData.cash
-      await availablePersonalSpend.save()
-      return res.status(200).json(availablePersonalSpend)
+    if (category === CATEGORIES.valutElement) {
+      const valutElement = await ValutElement.findById(id)
+      valutElement.card = newData.card
+      valutElement.cash = newData.cash
+      await valutElement.save()
+      return res.status(200).json(valutElement)
     }
   } catch (error) {
     console.error(error)
@@ -180,24 +159,41 @@ async function isGoogleLogin (req, res) {
     const userInfo = await fetchGoogleUserInfo(token)
     const { email, given_name, picture } = userInfo
     let user = await User.findOne({ email })
+    let exampleValut = {
+      title: 'Programación',
+      category: '📚 Estudios',
+      description: 'Cuenta de ahorro para futuros estudios',
+      currency: '€',
+      goal: 1000,
+      model: 'saving',
+      data: []
+    }
+
+    const exampleValutElement = {
+      descrption: '',
+      quantity: 200,
+      currency: '€',
+      method: 'card'
+    }
+    const methodSchema = { card: 0, cash: 0 }
 
     // console.log(user)
     if (!user) {
       user = new User({ name: given_name, email, image: picture })
       let newData = new Data(newDataUser)
-      const methodSchema = { card: 0, cash: 0 }
-      const availablePersonalSpend = new AvailablePersonalSpend(methodSchema)
+      let newValut = new Valut(exampleValut)
+      let newValutElement = new ValutElement(exampleValutElement)
       const balance = new Balance(methodSchema)
-      const balancePersonal = new PersonalBalance(methodSchema)
-      newData.available_personal_spend = availablePersonalSpend._id
-      newData.balance = balance._id
-      newData.personal_balance = balancePersonal._id
 
-      await availablePersonalSpend.save()
-      await balance.save()
-      await balancePersonal.save()
-      await newData.save()
+      newValut.data.push(newValutElement._id)
+      newData.balance = balance._id
+      newData.valut.push(newValut._id)
       user.data = newData._id
+
+      await balance.save()
+      await newValut.save()
+      await newValutElement.save()
+      await newData.save()
       await user.save()
       const token = generateSign(user._id, user.email)
       console.log('usuario creado correctamente')
@@ -220,33 +216,6 @@ async function isGoogleLogin (req, res) {
   }
 }
 
-const createPersonalSpend = async (req, res) => {
-  try {
-    const { data } = req.body
-    const { dataId } = req.params
-    const dataUser = await Data
-    const newPersonalSpend = new PersonalSpend(data)
-    const personalSpendSaved = await newPersonalSpend.save()
-    return res.status(200).json(personalSpendSaved)
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-const deletePersonalSpend = async (req, res) => {
-  try {
-    const { id } = req.params
-    const query = {
-      _id: id
-    }
-    const personalSpend = await PersonalSpend.deleteOne(query)
-    return res.status(200).json('Personal spend deleted!')
-  } catch (error) {
-    console.error(error)
-    return res.status(404).json(error)
-  }
-}
-
 const deleteFinancial = async (req, res) => {
   try {
     const { model, id } = req.params
@@ -260,11 +229,11 @@ const deleteFinancial = async (req, res) => {
       if (model === 'expense') {
         return Expense
       }
-      if (model === 'saving') {
-        return Saving
+      if (model === 'valut') {
+        return Valut
       }
-      if (model === 'investment') {
-        return Investment
+      if (model === 'valutElement') {
+        return ValutElement
       }
     }
     const financialModel = returnSchema()
@@ -276,42 +245,12 @@ const deleteFinancial = async (req, res) => {
   }
 }
 
-const putMonthGoal = async (req, res) => {
-  try {
-    const { id } = req.params
-    const newGoal = req.body
-    console.log(newGoal)
-    const newSchema = await MonthGoal.findById(id)
-    newSchema.monthGoal = newGoal.monthGoal
-    newSchema.startDate = newGoal.startDate
-    newSchema.endDate = newGoal.endDate
-    newSchema.save()
-    return res.status(200).json(newSchema)
-  } catch (error) {}
-}
-const createMonthGoal = async (req, res) => {
-  try {
-    const { id } = req.params
-    const newGoal = new MonthGoal({ monthGoal: 0 })
-    const userData = await Data.findById(id)
-    userData.monthGoal = newGoal._id
-    newGoal.save()
-    userData.save()
-    return res.status(200).json(userData)
-  } catch (error) {
-    console.log(error)
-  }
-}
 module.exports = {
   getDataUser,
-  putDataUser,
+  addDataUser,
   createDataUser,
   verifyToken,
   putMethodSchema,
-  deletePersonalSpend,
-  createPersonalSpend,
   deleteFinancial,
-  putMonthGoal,
-  createMonthGoal,
   isGoogleLogin
 }
