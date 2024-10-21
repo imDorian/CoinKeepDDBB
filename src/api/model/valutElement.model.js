@@ -3,10 +3,9 @@ const Schema = mongoose.Schema
 
 const ValutElementSchema = new Schema(
   {
-    description: { type: String },
     quantity: { type: Number, required: true },
     currency: { type: String, required: true },
-    method: { type: String, enum: ['card', 'cash'] }
+    method: { type: String, enum: ['card', 'cash'], required: true }
   },
   {
     timestamps: true

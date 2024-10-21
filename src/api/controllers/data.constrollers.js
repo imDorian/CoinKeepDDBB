@@ -53,9 +53,6 @@ const addDataUser = async (req, res) => {
       if (category === CATEGORIES.valut) {
         return new Valut(data)
       }
-      if (category === CATEGORIES.valutElement) {
-        return new ValutElement(data)
-      }
     }
     const { category, id } = req.params
     const newData = req.body
@@ -152,47 +149,22 @@ async function fetchGoogleUserInfo (accessToken) {
 }
 
 async function isGoogleLogin (req, res) {
-  // console.log(userInfo)
-  // Aquí puedes crear el usuario en tu base de datos o iniciar sesión
   try {
     const { token } = req.body
+    console.log(token)
     const userInfo = await fetchGoogleUserInfo(token)
     const { email, given_name, picture } = userInfo
     let user = await User.findOne({ email })
-    let exampleValut = {
-      title: 'Programación',
-      category: '📚 Estudios',
-      description: 'Cuenta de ahorro para futuros estudios',
-      currency: '€',
-      goal: 1000,
-      model: 'saving',
-      data: []
-    }
-
-    const exampleValutElement = {
-      descrption: '',
-      quantity: 200,
-      currency: '€',
-      method: 'card'
-    }
     const methodSchema = { card: 0, cash: 0 }
-
-    // console.log(user)
     if (!user) {
       user = new User({ name: given_name, email, image: picture })
       let newData = new Data(newDataUser)
-      let newValut = new Valut(exampleValut)
-      let newValutElement = new ValutElement(exampleValutElement)
       const balance = new Balance(methodSchema)
 
-      newValut.data.push(newValutElement._id)
       newData.balance = balance._id
-      newData.valut.push(newValut._id)
       user.data = newData._id
 
       await balance.save()
-      await newValut.save()
-      await newValutElement.save()
       await newData.save()
       await user.save()
       const token = generateSign(user._id, user.email)
@@ -206,10 +178,6 @@ async function isGoogleLogin (req, res) {
       console.log('Iniciando sesion')
       res.status(200).json({ token, user })
     }
-
-    // no existe usuario // crearlo
-    // existe usuario
-    // console.log(userInfo)
   } catch (error) {
     console.error(error)
     res.status(400).json({ error: 'Token inválido' })
@@ -245,6 +213,54 @@ const deleteFinancial = async (req, res) => {
   }
 }
 
+const addNewValut = async (req, res) => {
+  try {
+    const { data } = req.body
+    const { id } = req.params
+
+    const newData = await Data.findById(id)
+    const newValut = new Valut(data)
+
+    await newValut.save()
+    newData.valut.push(newValut._id)
+    await newData.save()
+    return res.status(200).json(newValut)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json(error)
+  }
+}
+
+const getDataValut = async (req, res) => {
+  try {
+    const { id } = req.params
+    const valut = await Valut.findById({ _id: id }).populate('data')
+    console.log(valut)
+    return res.status(200).json(valut)
+  } catch (error) {
+    console.error(error)
+    return res.json(404).json(error)
+  }
+}
+
+const addValutElement = async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = req.body
+    // console.log(data)
+    const valut = await Valut.findById({ _id: id })
+    const newValutElement = new ValutElement(data)
+    valut.data.push(newValutElement._id)
+    valut.accumulatedData =
+      Number(accumulatedData) + Number(newValutElement.quantity)
+    await valut.save()
+    await newValutElement.save()
+    return res.status(200).json(newValutElement)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 module.exports = {
   getDataUser,
   addDataUser,
@@ -252,5 +268,8 @@ module.exports = {
   verifyToken,
   putMethodSchema,
   deleteFinancial,
-  isGoogleLogin
+  isGoogleLogin,
+  addNewValut,
+  getDataValut,
+  addValutElement
 }

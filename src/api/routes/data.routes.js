@@ -8,7 +8,10 @@ const {
   putMethodSchema,
   deleteFinancial,
   isGoogleLogin,
-  addDataUser
+  addDataUser,
+  addNewValut,
+  getDataValut,
+  addValutElement
 } = require('../controllers/data.constrollers')
 
 router.get('/get/:id', getDataUser)
@@ -18,6 +21,9 @@ router.put('/put/:category/:id', addDataUser)
 router.put('/putmethodschema/:category/:id', putMethodSchema)
 router.delete('/deletefinancial/:model/:id', deleteFinancial)
 router.post('/auth/google', isGoogleLogin)
+router.post('/createvalut/:id', addNewValut)
+router.get('/getvalut/:id', getDataValut)
+router.post('/addvalutelement/:id', addValutElement)
 
 // router.post('/register', )
 // router.get('/all',)
