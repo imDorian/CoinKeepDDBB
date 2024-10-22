@@ -11,7 +11,8 @@ const {
   addDataUser,
   addNewValut,
   getDataValut,
-  addValutElement
+  addValutElement,
+  deleteValut
 } = require('../controllers/data.constrollers')
 
 router.get('/get/:id', getDataUser)
@@ -24,6 +25,7 @@ router.post('/auth/google', isGoogleLogin)
 router.post('/createvalut/:id', addNewValut)
 router.get('/getvalut/:id', getDataValut)
 router.post('/addvalutelement/:id', addValutElement)
+router.delete('/deletevalut/:id', deleteValut)
 
 // router.post('/register', )
 // router.get('/all',)

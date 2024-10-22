@@ -261,6 +261,18 @@ const addValutElement = async (req, res) => {
   }
 }
 
+const deleteValut = async (req, res) => {
+  try {
+    const { id } = req.params
+    const valut = await Valut.deleteOne({ _id: id })
+    // console.log(valut)
+    return res.status(200).json('Valut Deleted!')
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json('Error delete valut')
+  }
+}
+
 module.exports = {
   getDataUser,
   addDataUser,
@@ -271,5 +283,6 @@ module.exports = {
   isGoogleLogin,
   addNewValut,
   getDataValut,
-  addValutElement
+  addValutElement,
+  deleteValut
 }
