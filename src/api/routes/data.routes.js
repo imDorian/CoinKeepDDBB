@@ -12,7 +12,10 @@ const {
   addNewValut,
   getDataValut,
   addValutElement,
-  deleteValut
+  deleteValut,
+  createGroup,
+  getSearchUsers,
+  getGroup
 } = require('../controllers/data.constrollers')
 
 router.get('/get/:id', getDataUser)
@@ -26,6 +29,9 @@ router.post('/createvalut/:id', addNewValut)
 router.get('/getvalut/:id', getDataValut)
 router.post('/addvalutelement/:id', addValutElement)
 router.delete('/deletevalut/:id', deleteValut)
+router.post('/creategroup/:shareId', createGroup)
+router.get('/getsearchusers/:query/:myId', getSearchUsers)
+router.get('/getgroup/:id', getGroup)
 
 // router.post('/register', )
 // router.get('/all',)

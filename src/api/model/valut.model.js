@@ -9,7 +9,11 @@ const ValutSchema = new Schema(
     goal: { type: Number, required: true },
     currency: { type: String, required: true },
     model: { type: String, enum: ['saving', 'investment'], required: true },
-    accumulatedData: { type: Number, required: true },
+    accumulatedData: {
+      type: Number,
+      required: true,
+      default: 0
+    },
     data: [{ type: Schema.Types.ObjectId, ref: 'ValutElement' }]
   },
   {

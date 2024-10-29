@@ -12,7 +12,9 @@ const newDataUser = {
   income: [],
   expense: [],
   balance: {},
-  valut: []
+  valut: [],
+  user: '',
+  share: {}
 }
 
 const register = async (req, res, next) => {

@@ -6,7 +6,8 @@ const DataSchema = new Schema(
     income: [{ type: Schema.Types.ObjectId, ref: 'Income' }],
     expense: [{ type: Schema.Types.ObjectId, ref: 'Expense' }],
     balance: { type: Schema.Types.ObjectId, ref: 'Balance' },
-    valut: [{ type: Schema.Types.ObjectId, ref: 'Valut' }]
+    valut: [{ type: Schema.Types.ObjectId, ref: 'Valut' }],
+    share: { type: Schema.Types.ObjectId, ref: 'Share' }
   },
   {
     timestamps: true

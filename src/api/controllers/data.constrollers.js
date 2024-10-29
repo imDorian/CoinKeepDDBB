@@ -13,6 +13,13 @@ const User = require('../model/users.model')
 const { newDataUser } = require('./users.contollers')
 const Valut = require('../model/valut.model')
 const ValutElement = require('../model/valutElement.model')
+const Share = require('../model/share.model')
+const crypto = require('crypto')
+const Group = require('../model/group.model')
+const { group } = require('console')
+const BalanceShare = require('../model/balanceShare.model')
+const path = require('path')
+const { model } = require('mongoose')
 const client = new OAuth2Client(process.env.CLIENT_ID)
 
 const CATEGORIES = {
@@ -20,7 +27,8 @@ const CATEGORIES = {
   expense: 'expense',
   balance: 'balance',
   valut: 'valut',
-  valutElement: 'valutElement'
+  valutElement: 'valutElement',
+  share: 'share'
 }
 const getDataUser = async (req, res) => {
   try {
@@ -30,6 +38,17 @@ const getDataUser = async (req, res) => {
       .populate('expense')
       .populate('valut')
       .populate('balance')
+      .populate({
+        path: 'share',
+        populate: [
+          {
+            path: 'groups',
+            populate: [{ path: 'members' }, { path: 'balances' }]
+          },
+          { path: 'invitations' }
+        ]
+      })
+
     console.log(userData)
     if (userData) {
       return res.status(200).json(userData)
@@ -86,6 +105,9 @@ const createDataUser = async (req, res) => {
 const putMethodSchema = async (req, res) => {
   try {
     const { category, id } = req.params
+    if (!id || id === 'undefined') {
+      return res.status(400).json({ error: 'ID is missing or invalid' })
+    }
     const newData = req.body
     console.log('categoria', category, id, newData)
     if (category === CATEGORIES.balance) {
@@ -121,14 +143,6 @@ const verifyToken = async (req, res) => {
   }
 }
 
-async function verifyGoogleToken (token) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: process.env.CLIENT_ID
-  })
-  const payload = ticket.getPayload()
-  return payload
-}
 async function fetchGoogleUserInfo (accessToken) {
   const response = await fetch(
     `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`,
@@ -156,14 +170,29 @@ async function isGoogleLogin (req, res) {
     const { email, given_name, picture } = userInfo
     let user = await User.findOne({ email })
     const methodSchema = { card: 0, cash: 0 }
+    let shareSchema = {
+      groups: [],
+      invitations: [],
+      user: ''
+    }
     if (!user) {
-      user = new User({ name: given_name, email, image: picture })
+      const randomNum = crypto.randomInt(1000, 9999)
+      const username = `${given_name}#${randomNum}`
+      user = new User({
+        name: given_name,
+        email,
+        image: picture,
+        username: username
+      })
       let newData = new Data(newDataUser)
       const balance = new Balance(methodSchema)
-
+      shareSchema.user = user._id
+      const newShare = new Share(shareSchema)
+      newData.share = newShare._id
       newData.balance = balance._id
       user.data = newData._id
 
+      await newShare.save()
       await balance.save()
       await newData.save()
       await user.save()
@@ -273,6 +302,86 @@ const deleteValut = async (req, res) => {
   }
 }
 
+const createGroup = async (req, res) => {
+  try {
+    const { shareId } = req.params
+    console.log(shareId)
+    const data = req.body
+    const members = data.members.map(e => e.id)
+    data.members = members
+    const newGroup = new Group(data)
+    const share = await Share.findById({ _id: shareId })
+    const balancesPromises = data.members.map(async id => {
+      const balanceShare = new BalanceShare({
+        user: id,
+        group: newGroup._id,
+        card: 0,
+        cash: 0
+      })
+      newGroup.balances.push(balanceShare._id)
+      await balanceShare.save()
+    })
+    await Promise.all(balancesPromises)
+
+    share.groups.push(newGroup._id)
+    await share.save()
+    await newGroup.save()
+    const invitation = {
+      group: newGroup._id,
+      invitedBy: newGroup.boss,
+      status: 'pending'
+    }
+    const invitationsPromises = data.members.map(async memberId => {
+      if (memberId !== newGroup.boss) {
+        const memberShare = await Share.findOne({ user: memberId })
+
+        if (memberShare) {
+          memberShare.invitations.push(invitation)
+          await memberShare.save()
+        }
+      }
+    })
+    const populatedGroup = await Group.findById(newGroup._id)
+      .populate('balances')
+      .populate('members')
+    await Promise.all(invitationsPromises)
+    return res.status(200).json(populatedGroup)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json(error)
+  }
+}
+
+const getSearchUsers = async (req, res) => {
+  try {
+    const { query, myId } = req.params
+    const users = await User.find({
+      name: new RegExp(query, 'i'),
+      _id: { $ne: myId } // Excluye tu propio ID
+    }).limit(10)
+    return res.status(200).json(users)
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const getGroup = async (req, res) => {
+  try {
+    const { id } = req.params
+    const group = await Group.findById(id)
+      .populate({
+        path: 'balances',
+        populate: {
+          path: 'user'
+        }
+      })
+      .populate('members')
+    return res.status(200).json(group)
+  } catch (error) {
+    return res.status(500).json(error)
+  }
+}
+
 module.exports = {
   getDataUser,
   addDataUser,
@@ -284,5 +393,8 @@ module.exports = {
   addNewValut,
   getDataValut,
   addValutElement,
-  deleteValut
+  deleteValut,
+  createGroup,
+  getSearchUsers,
+  getGroup
 }
