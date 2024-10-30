@@ -8,6 +8,7 @@ const TransferSchema = new Schema({
     ref: 'User',
     required: true
   },
+  category: { type: String, required: true },
   toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, required: true },
   date: { type: Date, default: Date.now },
