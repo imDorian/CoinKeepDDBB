@@ -20,6 +20,8 @@ const { group } = require('console')
 const BalanceShare = require('../model/balanceShare.model')
 const path = require('path')
 const { model } = require('mongoose')
+const IncomeExpense = require('../model/incomeExpense.model')
+const Transfer = require('../model/transfer.model')
 const client = new OAuth2Client(process.env.CLIENT_ID)
 
 const CATEGORIES = {
@@ -370,15 +372,286 @@ const getGroup = async (req, res) => {
     const { id } = req.params
     const group = await Group.findById(id)
       .populate({
+        path: 'debts',
+        populate: [{ path: 'fromUser' }, { path: 'toUser' }]
+      })
+      .populate({
         path: 'balances',
         populate: {
           path: 'user'
         }
       })
       .populate('members')
+      .populate({ path: 'expenses', populate: { path: 'fromUser' } })
+      .populate({ path: 'incomes', populate: { path: 'fromUser' } })
+      .populate({
+        path: 'transfers',
+        populate: [{ path: 'fromUser' }, { path: 'toUser' }]
+      })
     return res.status(200).json(group)
   } catch (error) {
     return res.status(500).json(error)
+  }
+}
+
+const postGroupTransaction = async (req, res) => {
+  try {
+    const { groupId } = req.params
+    const data = req.body
+    const myGroup = await Group.findById(groupId).populate({
+      path: 'debts',
+      populate: [
+        { path: 'fromUser', model: 'User' },
+        { path: 'toUser', model: 'User' }
+      ]
+    })
+    // console.log(JSON.stringify(myGroup, null, 2))
+
+    const {
+      title = null,
+      amount,
+      category = null,
+      currency,
+      type = null,
+      group,
+      fromUser,
+      toUser = null,
+      date,
+      divide = null,
+      members = null,
+      method
+    } = data
+    const typeTransaction =
+      type === 'income'
+        ? 'incomes'
+        : type === 'expense'
+        ? 'expenses'
+        : 'transfers'
+
+    if (type === 'income' || type === 'expense') {
+      const newData = {
+        title,
+        amount: Number(amount),
+        category,
+        currency,
+        type,
+        group,
+        fromUser,
+        date,
+        divide,
+        members,
+        method
+      }
+      const newTransaction = new IncomeExpense(newData)
+      await newTransaction.save()
+      myGroup[typeTransaction].push(newTransaction)
+      divide?.forEach(div => {
+        if (div.checked && div.user !== fromUser) {
+          const debtFromUser = myGroup.debts.find(
+            debt =>
+              debt.fromUser._id.toString() === fromUser.toString() &&
+              debt.toUser._id.toString() === div.user &&
+              debt.status === 'pending'
+          )
+
+          const debtToUser = myGroup.debts.find(
+            debt =>
+              debt.fromUser._id.toString() === div.user &&
+              debt.toUser._id.toString() === fromUser &&
+              debt.status === 'pending'
+          )
+          if (type === 'expense') {
+            if (debtFromUser) {
+              console.log('debtFromUser-----')
+              if (debtFromUser.amount > div.amount) {
+                debtFromUser.amount =
+                  Number(debtFromUser.amount) - Number(div.amount)
+              } else if (debtFromUser.amount < div.amount) {
+                debtFromUser.status = 'settled'
+                const newDebt = {
+                  fromUser: div.user,
+                  toUser: fromUser,
+                  amount: Number(div.amount) - Number(debtFromUser.amount),
+                  status: 'pending'
+                }
+                myGroup.debts.push(newDebt)
+              } else {
+                debtFromUser.status = 'settled'
+              }
+            } else if (debtToUser) {
+              debtToUser.amount = Number(debtToUser.amount) + Number(div.amount)
+            } else {
+              const newDebt = {
+                amount: div.amount,
+                fromUser: div.user,
+                toUser: fromUser,
+                status: 'pending'
+              }
+              myGroup.debts.push(newDebt)
+            }
+          } else if (type === 'income') {
+            if (debtFromUser) {
+              debtFromUser.amount =
+                Number(debtFromUser.amount) + Number(div.amount)
+            } else if (debtToUser) {
+              if (debtToUser.amount < div.amount) {
+                debtToUser.status = 'settled'
+                const newDebts = {
+                  fromUser: fromUser,
+                  toUser: toUser,
+                  amount: Number(div.amount) - Number(debtToUser.amount),
+                  status: 'pending'
+                }
+                myGroup.debts.push(newDebts)
+              } else if (debtToUser.amount > div.amount) {
+                debtToUser.amount =
+                  Number(debtToUser.amount) - Number(div.amount)
+              } else {
+                debtToUser.status = 'settled'
+              }
+            } else {
+              const newDebt = {
+                fromUser,
+                toUser: div.user,
+                amount: div.amount,
+                status: 'pending'
+              }
+              myGroup.debts.push(newDebt)
+            }
+          }
+        }
+      })
+      await myGroup.save()
+      const transactionPop = await IncomeExpense.findById(
+        newTransaction._id
+      ).populate('fromUser')
+      const groupPop = await Group.findById(groupId).populate({
+        path: 'debts',
+        populate: {
+          path: 'fromUser toUser'
+        }
+      })
+      const response = {
+        transaction: transactionPop,
+        debts: groupPop.debts
+      }
+      console.log(response)
+      return res.status(200).json(response)
+    } else {
+      const newData = {
+        amount: Number(amount),
+        date,
+        fromUser,
+        toUser,
+        group,
+        title,
+        method,
+        category
+      }
+      const newTransfer = new Transfer(newData)
+      await newTransfer.save()
+      myGroup[typeTransaction].push(newTransfer)
+      const debtFromUser = myGroup.debts.find(
+        debt =>
+          debt.fromUser._id.toString() === fromUser.toString() &&
+          debt.toUser._id.toString() === toUser.toString() &&
+          debt.status === 'pending'
+      )
+
+      const debtToUser = myGroup.debts.find(
+        debt =>
+          debt.fromUser._id.toString() === toUser.toString() &&
+          debt.toUser._id.toString() === fromUser.toString() &&
+          debt.status === 'pending'
+      )
+
+      console.log(debtFromUser, debtToUser)
+
+      if (debtFromUser) {
+        console.log('debo algo')
+        if (debtFromUser.amount > newData.amount) {
+          debtFromUser.amount =
+            Number(debtFromUser.amount) - Number(newData.amount)
+        } else if (debtFromUser.amount < newData.amount) {
+          debtFromUser.status = 'settled'
+          const newDebt = {
+            fromUser: toUser,
+            toUser: fromUser,
+            amount: Number(newData.amount) - Number(debtFromUser.amount),
+            status: 'pending'
+          }
+          myGroup.debts.push(newDebt)
+        } else {
+          debtFromUser.status = 'settled'
+        }
+      } else if (debtToUser) {
+        console.log('me deben algo')
+        debtToUser.amount = Number(debtToUser.amount) + Number(newData.amount)
+      } else {
+        console.log('nadie debe nada', toUser, fromUser)
+        const newDebt = {
+          fromUser: toUser,
+          toUser: fromUser,
+          amount: newData.amount
+        }
+        myGroup.debts.push(newDebt)
+      }
+      await myGroup.save()
+      const transferPop = await Transfer.findById(newTransfer._id)
+        .populate('userFrom')
+        .populate('toUser')
+      const groupPop = await Group.findById(groupId).populate({
+        path: 'debts',
+        populate: {
+          path: 'fromUser toUser'
+        }
+      })
+      return res
+        .status(200)
+        .json({ trasaction: transferPop, debts: groupPop.debts })
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+const deleteGroup = async (req, res) => {
+  try {
+    const { groupId } = req.params
+    const groupDelete = await Group.findByIdAndDelete(groupId)
+    console.log(groupDelete)
+    res.status(200).json('¡Grupo borrado!')
+  } catch (error) {
+    console.error(error)
+    res.status(500).json(error)
+  }
+}
+
+const resolveDebt = async (req, res) => {
+  const { groupId, debtId } = req.params
+  const group = await Group.findById(groupId)
+  const debt = group?.debts.find(deb => deb._id.toString() === debtId)
+  if (group && debt) {
+    debt.status = 'settled'
+    const { fromUser, toUser, amount } = debt
+    const newTransfer = new Transfer({
+      fromUser,
+      group: group._id,
+      toUser,
+      amount: Number(amount),
+      category: '💸 Transferencia',
+      date: new Date(),
+      title: 'Transferencia'
+    })
+    await newTransfer.save()
+    const transferPop = await Transfer.findById(newTransfer._id)
+      .populate('fromUser')
+      .populate('toUser')
+    group.transfers.push(newTransfer._id)
+    await group.save()
+    return res.status(200).json({ transfer: transferPop, debts: group.debts })
+  } else {
+    console.log('no existe esta debt')
   }
 }
 
@@ -396,5 +669,8 @@ module.exports = {
   deleteValut,
   createGroup,
   getSearchUsers,
-  getGroup
+  getGroup,
+  postGroupTransaction,
+  deleteGroup,
+  resolveDebt
 }

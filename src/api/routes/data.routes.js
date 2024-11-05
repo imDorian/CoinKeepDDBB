@@ -15,7 +15,10 @@ const {
   deleteValut,
   createGroup,
   getSearchUsers,
-  getGroup
+  getGroup,
+  postGroupTransaction,
+  deleteGroup,
+  resolveDebt
 } = require('../controllers/data.constrollers')
 
 router.get('/get/:id', getDataUser)
@@ -32,6 +35,9 @@ router.delete('/deletevalut/:id', deleteValut)
 router.post('/creategroup/:shareId', createGroup)
 router.get('/getsearchusers/:query/:myId', getSearchUsers)
 router.get('/getgroup/:id', getGroup)
+router.post('/postgrouptransaction/:groupId', postGroupTransaction)
+router.delete('/deletegroup/:groupId', deleteGroup)
+router.post('/resolve/:groupId/:debtId', resolveDebt)
 
 // router.post('/register', )
 // router.get('/all',)

@@ -13,7 +13,7 @@ const IncomeExpenseSchema = new Schema(
     },
     method: {
       type: String,
-      enum: ['card', 'cash', 'other'],
+      enum: ['card', 'cash'],
       required: true
     },
     category: { type: String, required: true },

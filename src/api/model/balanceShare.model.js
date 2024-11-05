@@ -10,8 +10,8 @@ const BalanceShareSchema = new Schema(
     },
     group: {
       type: Schema.Types.ObjectId,
-      ref: 'Group'
-      //   required: true
+      ref: 'Group',
+      required: true
     },
     card: {
       type: Number,

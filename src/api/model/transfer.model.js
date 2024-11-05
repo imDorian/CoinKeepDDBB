@@ -12,7 +12,8 @@ const TransferSchema = new Schema({
   toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   amount: { type: Number, required: true },
   date: { type: Date, default: Date.now },
-  note: { type: String } // Información adicional opcional
+  title: { type: String },
+  method: { type: String, enum: ['card', 'cash'] } // Información adicional opcional
 })
 
 const Transfer = mongoose.model('Transfer', TransferSchema)
