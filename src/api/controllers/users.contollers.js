@@ -7,6 +7,7 @@ const {
 const { generateSign } = require('../../jwt/jwt')
 const Data = require('../model/data.model')
 const Balance = require('../model/balance.model')
+const Share = require('../model/share.model')
 
 const newDataUser = {
   income: [],
@@ -58,11 +59,11 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   const { email, password } = req.body
   const user = await User.findOne({ email })
-  console.log(user)
+  const share = await Share.findOne({ user: user._id })
   try {
     if (bcrypt.compareSync(password, user.password)) {
       const token = generateSign(user._id, user.email)
-      return res.status(200).json({ token, user })
+      return res.status(200).json({ token, user, shareId: share._id })
     } else {
       return res.status(401).json({ message: 'Wrong password' })
     }

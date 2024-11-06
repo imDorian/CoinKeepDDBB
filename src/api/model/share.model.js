@@ -13,17 +13,6 @@ const ShareSchema = new Schema(
         type: Schema.Types.ObjectId,
         ref: 'Group'
       }
-    ],
-    invitations: [
-      {
-        group: { type: Schema.Types.ObjectId, ref: 'Group', required: true },
-        invitedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        status: {
-          type: String,
-          enum: ['pending', 'accepted', 'declined'],
-          default: 'pending'
-        }
-      }
     ]
   },
   { timestamps: true }

@@ -46,8 +46,7 @@ const getDataUser = async (req, res) => {
           {
             path: 'groups',
             populate: [{ path: 'members' }, { path: 'balances' }]
-          },
-          { path: 'invitations' }
+          }
         ]
       })
 
@@ -200,14 +199,14 @@ async function isGoogleLogin (req, res) {
       await user.save()
       const token = generateSign(user._id, user.email)
       console.log('usuario creado correctamente')
-      res.status(200).json({ token, user })
+      res.status(200).json({ token, user, shareId: newShare._id })
     } else {
       user.image = picture || ''
       user.name = given_name || user.name
       user.email = email || user.email
       const token = generateSign(user._id, user.email)
-      console.log('Iniciando sesion')
-      res.status(200).json({ token, user })
+      const share = await Share.findOne({ user: user._id })
+      res.status(200).json({ token, user, shareId: share._id })
     }
   } catch (error) {
     console.error(error)
@@ -314,39 +313,43 @@ const createGroup = async (req, res) => {
     const newGroup = new Group(data)
     const share = await Share.findById({ _id: shareId })
     const balancesPromises = data.members.map(async id => {
-      const balanceShare = new BalanceShare({
-        user: id,
-        group: newGroup._id,
-        card: 0,
-        cash: 0
-      })
-      newGroup.balances.push(balanceShare._id)
-      await balanceShare.save()
+      try {
+        const balanceShare = new BalanceShare({
+          user: id,
+          group: newGroup._id,
+          card: 0,
+          cash: 0
+        })
+        newGroup.balances.push(balanceShare._id)
+        await balanceShare.save()
+        const memberShare = await Share.findOne({ user: id })
+        if (memberShare) {
+          memberShare.groups.push(newGroup._id)
+          await memberShare.save()
+        }
+      } catch (error) {
+        console.error(error)
+      }
     })
     await Promise.all(balancesPromises)
 
     share.groups.push(newGroup._id)
     await share.save()
     await newGroup.save()
-    const invitation = {
-      group: newGroup._id,
-      invitedBy: newGroup.boss,
-      status: 'pending'
-    }
-    const invitationsPromises = data.members.map(async memberId => {
-      if (memberId !== newGroup.boss) {
-        const memberShare = await Share.findOne({ user: memberId })
 
-        if (memberShare) {
-          memberShare.invitations.push(invitation)
-          await memberShare.save()
-        }
-      }
-    })
+    // const  = data.members.map(async memberId => {
+    //   if (memberId !== newGroup.boss) {
+    //     const memberShare = await Share.findOne({ user: memberId })
+    //     if (memberShare) {
+    //       memberShare.groups.push(newGroup._id)
+    //       await memberShare.save()
+    //     }
+    //   }
+    // })
+    // await Promise.all(invitationsPromises)
     const populatedGroup = await Group.findById(newGroup._id)
       .populate('balances')
       .populate('members')
-    await Promise.all(invitationsPromises)
     return res.status(200).json(populatedGroup)
   } catch (error) {
     console.error(error)
@@ -629,7 +632,10 @@ const deleteGroup = async (req, res) => {
 
 const resolveDebt = async (req, res) => {
   const { groupId, debtId } = req.params
-  const group = await Group.findById(groupId)
+  const group = await Group.findById(groupId).populate({
+    path: 'debts',
+    populate: [{ path: 'fromUser' }, { path: 'toUser' }]
+  })
   const debt = group?.debts.find(deb => deb._id.toString() === debtId)
   if (group && debt) {
     debt.status = 'settled'
