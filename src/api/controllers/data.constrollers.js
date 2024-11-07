@@ -305,13 +305,10 @@ const deleteValut = async (req, res) => {
 
 const createGroup = async (req, res) => {
   try {
-    const { shareId } = req.params
-    console.log(shareId)
     const data = req.body
     const members = data.members.map(e => e.id)
     data.members = members
     const newGroup = new Group(data)
-    const share = await Share.findById({ _id: shareId })
     const balancesPromises = data.members.map(async id => {
       try {
         const balanceShare = new BalanceShare({
@@ -333,8 +330,6 @@ const createGroup = async (req, res) => {
     })
     await Promise.all(balancesPromises)
 
-    share.groups.push(newGroup._id)
-    await share.save()
     await newGroup.save()
 
     // const  = data.members.map(async memberId => {
@@ -601,7 +596,7 @@ const postGroupTransaction = async (req, res) => {
       }
       await myGroup.save()
       const transferPop = await Transfer.findById(newTransfer._id)
-        .populate('userFrom')
+        .populate('fromUser')
         .populate('toUser')
       const groupPop = await Group.findById(groupId).populate({
         path: 'debts',
