@@ -606,7 +606,7 @@ const postGroupTransaction = async (req, res) => {
       })
       return res
         .status(200)
-        .json({ trasaction: transferPop, debts: groupPop.debts })
+        .json({ transaction: transferPop, debts: groupPop.debts })
     }
   } catch (error) {
     console.error(error)
