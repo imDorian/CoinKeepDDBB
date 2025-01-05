@@ -18,7 +18,8 @@ const {
   getGroup,
   postGroupTransaction,
   deleteGroup,
-  resolveDebt
+  resolveDebt,
+  putDataGroup
 } = require('../controllers/data.constrollers')
 
 router.get('/get/:id', getDataUser)
@@ -38,6 +39,7 @@ router.get('/getgroup/:id', getGroup)
 router.post('/postgrouptransaction/:groupId', postGroupTransaction)
 router.delete('/deletegroup/:groupId', deleteGroup)
 router.post('/resolve/:groupId/:debtId', resolveDebt)
+router.put('/changetitledesc/:groupId', putDataGroup)
 
 // router.post('/register', )
 // router.get('/all',)

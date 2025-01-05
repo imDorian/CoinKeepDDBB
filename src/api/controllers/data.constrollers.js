@@ -656,6 +656,21 @@ const resolveDebt = async (req, res) => {
   }
 }
 
+const putDataGroup = async (req, res) => {
+  const { groupId } = req.params
+  const newData = req.body
+  try {
+    const group = await Group.findById(groupId)
+    group.title = newData.title
+    group.description = newData.description
+    const newGroup = await group.save()
+    res.status(200).json(newGroup)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json(error)
+  }
+}
+
 module.exports = {
   getDataUser,
   addDataUser,
@@ -673,5 +688,6 @@ module.exports = {
   getGroup,
   postGroupTransaction,
   deleteGroup,
-  resolveDebt
+  resolveDebt,
+  putDataGroup
 }
