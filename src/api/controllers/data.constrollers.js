@@ -671,6 +671,24 @@ const putDataGroup = async (req, res) => {
   }
 }
 
+const deleteListItem = async (req, res) => {
+  try {
+    const { itemId } = req.params
+    const itemInc = await Income.findById(itemId)
+    const itemExp = await Expense.findById(itemId)
+    if (itemInc) {
+      await Income.findByIdAndDelete(itemInc)
+      res.status(200).json({ type: 'income', _id: itemInc._id })
+    } else {
+      await Expense.findByIdAndDelete(itemExp)
+      res.status(200).json({ type: 'expense', _id: itemExp._id })
+    }
+  } catch (error) {
+    console.error(error)
+    res.status(500).json(error)
+  }
+}
+
 module.exports = {
   getDataUser,
   addDataUser,
@@ -689,5 +707,6 @@ module.exports = {
   postGroupTransaction,
   deleteGroup,
   resolveDebt,
-  putDataGroup
+  putDataGroup,
+  deleteListItem
 }
