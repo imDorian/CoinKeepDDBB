@@ -1,6 +1,6 @@
 
 const express = require('express')
-const {connect} = require('./src/utils/database')
+const { connect } = require('./src/utils/database')
 const morgan = require('morgan')
 
 const bodyParser = require('body-parser')
@@ -18,14 +18,13 @@ const server = http.createServer(app)
 
 app.use(cors())
 app.use(morgan('dev'))
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 dotenv.config()
 const PORT = process.env.PORT || 3000
 
 connect()
-app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
