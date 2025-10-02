@@ -144,7 +144,7 @@ const verifyToken = async (req, res) => {
   }
 }
 
-async function fetchGoogleUserInfo (accessToken) {
+async function fetchGoogleUserInfo(accessToken) {
   const response = await fetch(
     `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`,
     {
@@ -163,7 +163,7 @@ async function fetchGoogleUserInfo (accessToken) {
   return data
 }
 
-async function isGoogleLogin (req, res) {
+async function isGoogleLogin(req, res) {
   try {
     const { token } = req.body
     console.log(token)
@@ -265,7 +265,7 @@ const getDataValut = async (req, res) => {
   try {
     const { id } = req.params
     const valut = await Valut.findById({ _id: id }).populate('data')
-    console.log(valut)
+    valut.data.sort((a, b) => new Date(b.date) - new Date(a.date))
     return res.status(200).json(valut)
   } catch (error) {
     console.error(error)
@@ -277,12 +277,12 @@ const addValutElement = async (req, res) => {
   try {
     const { id } = req.params
     const data = req.body
-    // console.log(data)
     const valut = await Valut.findById({ _id: id })
+    console.log(valut, "valut")
     const newValutElement = new ValutElement(data)
     valut.data.push(newValutElement._id)
     valut.accumulatedData =
-      Number(accumulatedData) + Number(newValutElement.quantity)
+      Number(valut.accumulatedData) + Number(newValutElement.quantity)
     await valut.save()
     await newValutElement.save()
     return res.status(200).json(newValutElement)
@@ -423,8 +423,8 @@ const postGroupTransaction = async (req, res) => {
       type === 'income'
         ? 'incomes'
         : type === 'expense'
-        ? 'expenses'
-        : 'transfers'
+          ? 'expenses'
+          : 'transfers'
 
     if (type === 'income' || type === 'expense') {
       const newData = {
